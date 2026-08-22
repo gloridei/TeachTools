@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spin the Wheel — Chalk &amp; Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+  .wheel-layout{
+    display:grid;
+    grid-template-columns: 1fr 320px;
+    gap: 30px;
+  }
+  @media (max-width: 820px){
+    .wheel-layout{ grid-template-columns: 1fr; }
+  }
+  .wheel-wrap{
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    padding: 10px;
+  }
+  #wheelCanvas{
+    max-width: 100%;
+    filter: drop-shadow(0 14px 28px rgba(0,0,0,.45));
+  }
+  .pointer{
+    position:absolute;
+    top: 6px; left:50%;
+    transform: translateX(-50%);
+    width:0; height:0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 24px solid var(--chalk-yellow);
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,.5));
+    z-index:2;
+  }
+  .winner-banner{
+    text-align:center;
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    color: var(--chalk-yellow);
+    min-height: 1.4em;
+    margin-top: 6px;
+  }
+  .names-count{
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    color: var(--chalk-dim);
+    margin-top: -8px;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <nav class="top-nav">
+    <a class="brand" href="../index.html"><span class="brand-name">Chalk &amp; Board</span></a>
+    <a class="back-link" href="../index.html">← All tools</a>
+  </nav>
+
+  <section class="hero">
+    <h1>Spin the <span class="accent">Wheel</span></h1>
+    <p>List your students, words, or topics — one per line — and spin to pick. Tick the box to remove each winner so nobody gets picked twice.</p>
+  </section>
+
+  <div class="wheel-layout">
+    <div class="panel stack">
+      <div class="wheel-wrap">
+        <div class="pointer"></div>
+        <canvas id="wheelCanvas" width="480" height="480"></canvas>
+      </div>
+      <div class="winner-banner" id="winnerBanner">&nbsp;</div>
+      <div class="btn-row center">
+        <button class="btn" id="spinBtn">Spin</button>
+        <button class="btn secondary" id="removeBtn" disabled>Remove winner from list</button>
+      </div>
+    </div>
+
+    <div class="panel stack">
+      <div>
+        <label for="namesArea">Names or items (one per line)</label>
+        <textarea id="namesArea" rows="12">Ava
+Liam
+Sofia
+Noah
+Mia
+Lucas</textarea>
+      </div>
+      <div class="names-count" id="namesCount">6 entries</div>
+      <button class="btn secondary" id="applyBtn">Update wheel</button>
+    </div>
+  </div>
+
+  <footer class="site-footer">Chalk &amp; Board — a free toolkit for ESL teachers</footer>
+</div>
+
+<script>
+  const canvas = document.getElementById('wheelCanvas');
+  const ctx = canvas.getContext('2d');
+  const namesArea = document.getElementById('namesArea');
+  const applyBtn = document.getElementById('applyBtn');
+  const spinBtn = document.getElementById('spinBtn');
+  const removeBtn = document.getElementById('removeBtn');
+  const winnerBanner = document.getElementById('winnerBanner');
+  const namesCount = document.getElementById('namesCount');
+
+  const COLORS = ['#e2836f','#8db4d4','#e8c05f','#9fcf9a','#c98fd0','#e8977f','#7fb8c9','#d9c26a'];
+
+  let items = [];
+  let rotation = 0; // radians
+  let spinning = false;
+  let lastWinnerIndex = -1;
+
+  function parseItems(){
+    items = namesArea.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    namesCount.textContent = items.length + (items.length===1 ? ' entry' : ' entries');
+    lastWinnerIndex = -1;
+    removeBtn.disabled = true;
+    winnerBanner.textContent = '\u00A0';
+  }
+
+  function drawWheel(){
+    const w = canvas.width, h = canvas.height;
+    const cx = w/2, cy = h/2, r = w/2 - 8;
+    ctx.clearRect(0,0,w,h);
+
+    if(items.length === 0){
+      ctx.fillStyle = '#2d3f35';
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#cfd0c6';
+      ctx.font = '20px "Work Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Add some names →', cx, cy);
+      return;
+    }
+
+    const slice = (Math.PI*2) / items.length;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+
+    items.forEach((label, i)=>{
+      const start = i*slice;
+      const end = start + slice;
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.arc(0,0,r,start,end);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[i % COLORS.length];
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.25)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.save();
+      ctx.rotate(start + slice/2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#20241c';
+      const fontSize = items.length > 14 ? 13 : 17;
+      ctx.font = `600 ${fontSize}px "Work Sans", sans-serif`;
+      let text = label;
+      const maxChars = items.length > 10 ? 12 : 18;
+      if(text.length > maxChars) text = text.slice(0,maxChars-1)+'…';
+      ctx.fillText(text, r - 16, 5);
+      ctx.restore();
+    });
+
+    ctx.restore();
+
+    // hub
+    ctx.beginPath();
+    ctx.arc(cx,cy,26,0,Math.PI*2);
+    ctx.fillStyle = '#f3f1e7';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#1a251f';
+    ctx.stroke();
+  }
+
+  function spin(){
+    if(spinning || items.length === 0) return;
+    spinning = true;
+    removeBtn.disabled = true;
+    winnerBanner.textContent = '\u00A0';
+
+    const slice = (Math.PI*2) / items.length;
+    const extraTurns = 5 + Math.random()*3;
+    const randomOffset = Math.random() * Math.PI * 2;
+    const targetRotation = rotation + extraTurns*Math.PI*2 + randomOffset;
+
+    const duration = 4200;
+    const start = performance.now();
+    const startRotation = rotation;
+
+    function easeOutCubic(t){ return 1 - Math.pow(1-t,3); }
+
+    function frame(now){
+      const t = Math.min(1, (now-start)/duration);
+      const eased = easeOutCubic(t);
+      rotation = startRotation + (targetRotation-startRotation)*eased;
+      drawWheel();
+      if(t < 1){
+        requestAnimationFrame(frame);
+      } else {
+        spinning = false;
+        // pointer sits at top (angle = -PI/2 relative to unrotated wheel)
+        const normalized = ((rotation % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
+        // pointer is at top, which corresponds to angle -PI/2 before rotation applied;
+        // find which slice currently occupies the top position
+        let pointerAngle = (Math.PI*2 - normalized + (3*Math.PI/2)) % (Math.PI*2);
+        const index = Math.floor(pointerAngle / slice) % items.length;
+        lastWinnerIndex = index;
+        winnerBanner.textContent = items[index];
+        removeBtn.disabled = false;
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function removeWinner(){
+    if(lastWinnerIndex < 0 || lastWinnerIndex >= items.length) return;
+    items.splice(lastWinnerIndex, 1);
+    namesArea.value = items.join('\n');
+    namesCount.textContent = items.length + (items.length===1 ? ' entry' : ' entries');
+    lastWinnerIndex = -1;
+    removeBtn.disabled = true;
+    winnerBanner.textContent = '\u00A0';
+    drawWheel();
+  }
+
+  applyBtn.addEventListener('click', ()=>{ parseItems(); drawWheel(); });
+  spinBtn.addEventListener('click', spin);
+  removeBtn.addEventListener('click', removeWinner);
+
+  parseItems();
+  drawWheel();
+</script>
+
+</body>
+</html>

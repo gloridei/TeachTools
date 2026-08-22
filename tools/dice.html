@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roll the Dice — Chalk &amp; Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+  .dice-row{
+    display:flex; flex-wrap:wrap; gap:22px;
+    justify-content:center;
+    padding: 30px 0 10px;
+    min-height: 140px;
+    align-items:center;
+  }
+  .die{
+    width: 92px; height: 92px;
+    background: linear-gradient(160deg, #fbfaf5, #e7e3d4);
+    border-radius: 16px;
+    box-shadow: 0 10px 22px rgba(0,0,0,.4), inset 0 0 0 2px rgba(0,0,0,.06);
+    position: relative;
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    grid-template-rows: repeat(3,1fr);
+    padding: 14px;
+    transition: transform .5s cubic-bezier(.2,.8,.3,1.3);
+  }
+  .die.rolling{ animation: shake .55s ease; }
+  @keyframes shake{
+    0%{ transform: rotate(0); }
+    25%{ transform: rotate(-14deg) scale(1.03); }
+    50%{ transform: rotate(10deg) scale(1.05); }
+    75%{ transform: rotate(-6deg); }
+    100%{ transform: rotate(0); }
+  }
+  .pip{
+    width: 14px; height:14px;
+    border-radius:50%;
+    background: #2a2a26;
+    align-self:center; justify-self:center;
+    opacity:0;
+  }
+  .pip.on{ opacity:1; }
+  /* grid positions p1..p9, left-right top-bottom */
+  .p1{grid-area:1/1;} .p2{grid-area:1/2;} .p3{grid-area:1/3;}
+  .p4{grid-area:2/1;} .p5{grid-area:2/2;} .p6{grid-area:2/3;}
+  .p7{grid-area:3/1;} .p8{grid-area:3/2;} .p9{grid-area:3/3;}
+
+  .controls{
+    display:flex; gap: 24px; flex-wrap:wrap;
+    align-items:flex-end; justify-content:center;
+    margin-top: 10px;
+  }
+  .field{ width: 140px; }
+  .sum-line{
+    text-align:center;
+    font-family: var(--font-mono);
+    color: var(--chalk-dim);
+    font-size: .85rem;
+    margin-top: 18px;
+  }
+  .sum-line b{ color: var(--chalk-yellow); font-size: 1.1rem; }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <nav class="top-nav">
+    <a class="brand" href="../index.html"><span class="brand-name">Chalk &amp; Board</span></a>
+    <a class="back-link" href="../index.html">← All tools</a>
+  </nav>
+
+  <section class="hero">
+    <h1>Roll the <span class="accent">Dice</span></h1>
+    <p>Choose how many dice, then roll. Read them off the screen for grammar drills, board games, or number practice.</p>
+  </section>
+
+  <div class="panel stack">
+    <div class="controls">
+      <div class="field">
+        <label for="diceCount">Number of dice</label>
+        <select id="diceCount">
+          <option>1</option><option selected>2</option><option>3</option>
+          <option>4</option><option>5</option><option>6</option>
+        </select>
+      </div>
+      <button class="btn" id="rollBtn">Roll</button>
+    </div>
+
+    <div class="dice-row" id="diceRow"></div>
+    <div class="sum-line">Total: <b id="sumLabel">–</b></div>
+  </div>
+
+  <footer class="site-footer">Chalk &amp; Board — a free toolkit for ESL teachers</footer>
+</div>
+
+<script>
+  const diceRow = document.getElementById('diceRow');
+  const diceCount = document.getElementById('diceCount');
+  const rollBtn = document.getElementById('rollBtn');
+  const sumLabel = document.getElementById('sumLabel');
+
+  // pip layout per face value, referencing p1..p9 (3x3 grid)
+  const FACES = {
+    1: [5],
+    2: [1,9],
+    3: [1,5,9],
+    4: [1,3,7,9],
+    5: [1,3,5,7,9],
+    6: [1,3,4,6,7,9]
+  };
+
+  function buildDie(){
+    const die = document.createElement('div');
+    die.className = 'die';
+    for(let i=1;i<=9;i++){
+      const pip = document.createElement('div');
+      pip.className = 'pip p'+i;
+      die.appendChild(pip);
+    }
+    return die;
+  }
+
+  function setFace(die, value){
+    const pips = die.querySelectorAll('.pip');
+    pips.forEach(p => p.classList.remove('on'));
+    FACES[value].forEach(i => die.querySelector('.p'+i).classList.add('on'));
+  }
+
+  function renderDice(n){
+    diceRow.innerHTML = '';
+    for(let i=0;i<n;i++){
+      const die = buildDie();
+      setFace(die, 1);
+      diceRow.appendChild(die);
+    }
+  }
+
+  function roll(){
+    const n = parseInt(diceCount.value, 10);
+    if(diceRow.children.length !== n) renderDice(n);
+    const dice = Array.from(diceRow.children);
+    let sum = 0;
+    dice.forEach(die => {
+      die.classList.remove('rolling');
+      void die.offsetWidth; // restart animation
+      die.classList.add('rolling');
+      const value = 1 + Math.floor(Math.random()*6);
+      sum += value;
+      setTimeout(()=> setFace(die, value), 260);
+    });
+    sumLabel.textContent = '…';
+    setTimeout(()=>{ sumLabel.textContent = sum; }, 560);
+  }
+
+  diceCount.addEventListener('change', ()=> renderDice(parseInt(diceCount.value,10)));
+  rollBtn.addEventListener('click', roll);
+  renderDice(parseInt(diceCount.value,10));
+</script>
+
+</body>
+</html>

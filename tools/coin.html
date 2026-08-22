@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flip a Coin — Chalk &amp; Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+  .coin-stage{
+    display:flex; align-items:center; justify-content:center;
+    padding: 40px 0 20px;
+    perspective: 900px;
+  }
+  .coin{
+    width: 220px; height: 220px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 1.5s cubic-bezier(.2,.6,.2,1);
+    cursor: pointer;
+  }
+  .coin.spinning{ transition: transform 1.5s cubic-bezier(.2,.6,.2,1); }
+  .face{
+    position:absolute; inset:0;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    backface-visibility: hidden;
+    font-family: var(--font-display);
+    font-size: 3rem;
+    box-shadow: inset 0 0 0 4px rgba(0,0,0,.15), 0 10px 26px rgba(0,0,0,.4);
+  }
+  .face.heads{
+    background: radial-gradient(circle at 35% 30%, #f3d488, var(--chalk-yellow));
+    color:#4a3a10;
+    transform: rotateY(0deg) translateZ(1px);
+  }
+  .face.tails{
+    background: radial-gradient(circle at 35% 30%, #b7d2e6, var(--chalk-blue));
+    color:#1e3143;
+    transform: rotateY(180deg) translateZ(1px);
+  }
+  .result-label{
+    text-align:center;
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    min-height: 1.4em;
+    margin-top: 6px;
+    color: var(--chalk-yellow);
+  }
+  .tally{
+    display:flex; gap: 30px; justify-content:center;
+    font-family: var(--font-mono);
+    font-size: .82rem;
+    color: var(--chalk-dim);
+    margin-top: 4px;
+  }
+  .tally b{ color: var(--chalk); font-size: 1rem; }
+  .history{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-top: 18px;
+    justify-content:center;
+  }
+  .history span{
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    padding: 4px 9px;
+    border-radius: 20px;
+    background: var(--board-deep);
+    color: var(--chalk-dim);
+  }
+  .history span.h{ color: var(--chalk-yellow); }
+  .history span.t{ color: var(--chalk-blue); }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <filter id="roughen" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.4"/>
+  </filter>
+</svg>
+
+<div class="frame">
+  <nav class="top-nav">
+    <a class="brand" href="../index.html">
+      <span class="brand-name">Chalk &amp; Board</span>
+    </a>
+    <a class="back-link" href="../index.html">← All tools</a>
+  </nav>
+
+  <section class="hero">
+    <h1>Flip a <span class="accent">Coin</span></h1>
+    <p>Tap the coin, or hit the button. Great for deciding who goes first, or a fast yes/no in the middle of a drill.</p>
+  </section>
+
+  <div class="panel stack">
+    <div class="coin-stage">
+      <div class="coin" id="coin" role="button" tabindex="0" aria-label="Flip the coin">
+        <div class="face heads">H</div>
+        <div class="face tails">T</div>
+      </div>
+    </div>
+    <div class="result-label" id="resultLabel">&nbsp;</div>
+    <div class="btn-row center">
+      <button class="btn" id="flipBtn">Flip the coin</button>
+      <button class="btn secondary" id="resetBtn">Reset count</button>
+    </div>
+    <div class="tally">
+      <div>Heads: <b id="headsCount">0</b></div>
+      <div>Tails: <b id="tailsCount">0</b></div>
+      <div>Flips: <b id="totalCount">0</b></div>
+    </div>
+    <div class="history" id="history"></div>
+  </div>
+
+  <footer class="site-footer">Chalk &amp; Board — a free toolkit for ESL teachers</footer>
+</div>
+
+<script>
+  const coin = document.getElementById('coin');
+  const flipBtn = document.getElementById('flipBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const resultLabel = document.getElementById('resultLabel');
+  const headsCountEl = document.getElementById('headsCount');
+  const tailsCountEl = document.getElementById('tailsCount');
+  const totalCountEl = document.getElementById('totalCount');
+  const historyEl = document.getElementById('history');
+
+  let heads = 0, tails = 0, spins = 0, busy = false;
+  const log = [];
+
+  function flip(){
+    if(busy) return;
+    busy = true;
+    resultLabel.textContent = '…';
+    const extraSpins = 4 + Math.floor(Math.random()*3); // full rotations
+    const landHeads = Math.random() < 0.5;
+    const finalDeg = extraSpins*360 + (landHeads ? 0 : 180);
+    spins += 360; // keep accumulating so each flip rotates forward, not snapping back
+    const target = spins + (landHeads ? 0 : 180) + (extraSpins-1)*360;
+    coin.style.transform = `rotateY(${target}deg)`;
+
+    setTimeout(()=>{
+      const result = landHeads ? 'Heads' : 'Tails';
+      resultLabel.textContent = result;
+      if(landHeads) heads++; else tails++;
+      headsCountEl.textContent = heads;
+      tailsCountEl.textContent = tails;
+      totalCountEl.textContent = heads + tails;
+      log.unshift(landHeads ? 'H' : 'T');
+      if(log.length > 20) log.pop();
+      renderHistory();
+      busy = false;
+      spins = target;
+    }, 1550);
+  }
+
+  function renderHistory(){
+    historyEl.innerHTML = log.map(r => `<span class="${r==='H'?'h':'t'}">${r==='H'?'Heads':'Tails'}</span>`).join('');
+  }
+
+  function reset(){
+    heads = 0; tails = 0; log.length = 0;
+    headsCountEl.textContent = 0;
+    tailsCountEl.textContent = 0;
+    totalCountEl.textContent = 0;
+    resultLabel.textContent = '\u00A0';
+    renderHistory();
+  }
+
+  flipBtn.addEventListener('click', flip);
+  coin.addEventListener('click', flip);
+  coin.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); flip(); }});
+  resetBtn.addEventListener('click', reset);
+</script>
+
+</body>
+</html>

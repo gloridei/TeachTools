@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Board Game Templates — Chalk &amp; Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+  .tabs{
+    display:flex; gap: 10px; margin-bottom: 22px;
+  }
+  .tab-btn{
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    background: transparent;
+    color: var(--chalk-dim);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 30px;
+    padding: 9px 18px;
+    cursor:pointer;
+  }
+  .tab-btn.active{
+    background: var(--chalk-yellow);
+    color: #2a2210;
+    border-color: transparent;
+  }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  .config-row{
+    display:flex; flex-wrap:wrap; gap:20px;
+    align-items:flex-end;
+    margin-bottom: 22px;
+  }
+  .config-row .field{ width: 190px; }
+  .config-row .field.wide{ width: 320px; }
+
+  /* ---- race track ---- */
+  #trackTitleDisplay{
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    text-align:center;
+    margin: 0 0 18px;
+    color:#20241c;
+  }
+  .track-sheet{
+    background: #f3f1e7;
+    border-radius: 10px;
+    padding: 26px;
+    color: #20241c;
+  }
+  .track-grid{
+    display:grid;
+    gap: 6px;
+  }
+  .track-cell{
+    aspect-ratio: 1;
+    border: 2px solid #20241c;
+    border-radius: 6px;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    font-family: var(--font-mono);
+    font-weight:700;
+    font-size: .8rem;
+    text-align:center;
+    padding: 3px;
+    background: #fff;
+  }
+  .track-cell .num{ font-size: .95rem; }
+  .track-cell .icon{ font-size: 1rem; margin-top:2px; }
+  .track-cell.start{ background: #d9ecd6; }
+  .track-cell.finish{ background: #f3d0c9; }
+  .track-cell.special{ background: #fdeec2; }
+
+  /* ---- word grid ---- */
+  .grid-sheet{
+    background: #f3f1e7;
+    border-radius: 10px;
+    padding: 26px;
+    color: #20241c;
+  }
+  #gridTitleDisplay{
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    text-align:center;
+    margin: 0 0 18px;
+  }
+  .word-grid{
+    display:grid;
+    gap: 8px;
+  }
+  .word-cell{
+    aspect-ratio: 1;
+    border: 2px solid #20241c;
+    border-radius: 8px;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+    font-family: var(--font-body);
+    font-weight:600;
+    font-size: .95rem;
+    padding: 6px;
+    background:#fff;
+    line-height:1.15;
+  }
+  .word-cell.free{ background:#fdeec2; font-family: var(--font-display); font-size:1.2rem; }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <nav class="top-nav">
+    <a class="brand" href="../index.html"><span class="brand-name">Chalk &amp; Board</span></a>
+    <a class="back-link" href="../index.html">← All tools</a>
+  </nav>
+
+  <section class="hero">
+    <h1>Board Game <span class="accent">Templates</span></h1>
+    <p>Set the details, then print. Built for vocabulary review, grammar races, and end-of-unit games.</p>
+  </section>
+
+  <div class="tabs no-print">
+    <button class="tab-btn active" data-tab="track">Race Track</button>
+    <button class="tab-btn" data-tab="grid">Word Grid / Bingo</button>
+  </div>
+
+  <!-- ===================== RACE TRACK ===================== -->
+  <div class="tab-panel active" id="panel-track">
+    <div class="panel">
+      <div class="config-row no-print">
+        <div class="field wide">
+          <label for="trackTitle">Board title</label>
+          <input type="text" id="trackTitle" value="Vocabulary Race" maxlength="40">
+        </div>
+        <div class="field">
+          <label for="trackSpaces">Number of spaces</label>
+          <input type="number" id="trackSpaces" value="30" min="12" max="60" step="1">
+        </div>
+        <div class="field">
+          <label for="trackCols">Row width</label>
+          <select id="trackCols">
+            <option value="6">6 per row</option>
+            <option value="8" selected>8 per row</option>
+            <option value="10">10 per row</option>
+          </select>
+        </div>
+        <button class="btn secondary" id="trackBuildBtn">Build board</button>
+        <button class="btn" id="trackPrintBtn">Print</button>
+      </div>
+
+      <div class="track-sheet">
+        <h2 id="trackTitleDisplay">Vocabulary Race</h2>
+        <div class="track-grid" id="trackGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== WORD GRID ===================== -->
+  <div class="tab-panel" id="panel-grid">
+    <div class="panel">
+      <div class="config-row no-print">
+        <div class="field wide">
+          <label for="gridTitle">Board title</label>
+          <input type="text" id="gridTitle" value="Unit 4 Vocabulary Bingo" maxlength="40">
+        </div>
+        <div class="field">
+          <label for="gridRows">Rows</label>
+          <select id="gridRows">
+            <option>3</option><option selected>4</option><option>5</option><option>6</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="gridCols">Columns</label>
+          <select id="gridCols">
+            <option>3</option><option selected>4</option><option>5</option><option>6</option>
+          </select>
+        </div>
+        <div class="field" style="width:auto; display:flex; align-items:center; gap:8px; padding-bottom:8px;">
+          <input type="checkbox" id="gridFree" style="width:auto;">
+          <label for="gridFree" style="margin:0;">Free space (odd grids)</label>
+        </div>
+      </div>
+      <div class="config-row no-print">
+        <div class="field wide" style="width:100%;">
+          <label for="gridWords">Words or phrases (one per line — fill or exceed the grid, extras are ignored)</label>
+          <textarea id="gridWords" rows="6">apple
+bicycle
+weather
+holiday
+kitchen
+bridge
+mountain
+airport
+neighbor
+schedule
+argument
+suitcase
+umbrella
+calendar
+furniture
+sandwich</textarea>
+        </div>
+      </div>
+      <div class="config-row no-print">
+        <button class="btn secondary" id="gridBuildBtn">Build board</button>
+        <button class="btn secondary" id="gridShuffleBtn">Shuffle words</button>
+        <button class="btn" id="gridPrintBtn">Print</button>
+      </div>
+
+      <div class="grid-sheet">
+        <h2 id="gridTitleDisplay">Unit 4 Vocabulary Bingo</h2>
+        <div class="word-grid" id="wordGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer no-print">Chalk &amp; Board — a free toolkit for ESL teachers</footer>
+</div>
+
+<script>
+  /* ---------------- tabs ---------------- */
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  /* ---------------- race track ---------------- */
+  const trackTitle = document.getElementById('trackTitle');
+  const trackTitleDisplay = document.getElementById('trackTitleDisplay');
+  const trackSpaces = document.getElementById('trackSpaces');
+  const trackCols = document.getElementById('trackCols');
+  const trackGrid = document.getElementById('trackGrid');
+
+  const SPECIAL_ICONS = ['⭐ Bonus turn', '⏳ Miss a turn', '↺ Back 2 spaces', '🎁 Swap places'];
+
+  function buildTrack(){
+    const total = Math.max(12, Math.min(60, parseInt(trackSpaces.value,10) || 30));
+    const cols = parseInt(trackCols.value, 10);
+    const rows = Math.ceil(total/cols);
+    trackTitleDisplay.textContent = trackTitle.value || 'Race Track';
+    trackGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    trackGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    trackGrid.innerHTML = '';
+
+    // build placement array so print order follows a snake path visually
+    const cellsByPosition = new Array(rows*cols).fill(null);
+
+    for(let index=0; index<total; index++){
+      const row = Math.floor(index/cols);
+      let posInRow = index % cols;
+      if(row % 2 === 1) posInRow = cols-1-posInRow;
+      const gridIndex = row*cols + posInRow;
+      cellsByPosition[gridIndex] = index;
+    }
+
+    let specialCounter = 0;
+    for(let gridIndex=0; gridIndex<rows*cols; gridIndex++){
+      const cell = document.createElement('div');
+      cell.className = 'track-cell';
+      const index = cellsByPosition[gridIndex];
+      if(index === null){
+        cell.style.visibility = 'hidden';
+      } else {
+        const num = index+1;
+        const isStart = index === 0;
+        const isFinish = index === total-1;
+        const isSpecial = !isStart && !isFinish && (num % 5 === 0);
+        if(isStart) cell.classList.add('start');
+        else if(isFinish) cell.classList.add('finish');
+        else if(isSpecial) cell.classList.add('special');
+
+        const numSpan = document.createElement('div');
+        numSpan.className = 'num';
+        numSpan.textContent = isStart ? 'START' : (isFinish ? 'FINISH' : num);
+        cell.appendChild(numSpan);
+
+        if(isSpecial){
+          const icon = document.createElement('div');
+          icon.className = 'icon';
+          icon.textContent = SPECIAL_ICONS[specialCounter % SPECIAL_ICONS.length];
+          specialCounter++;
+          cell.appendChild(icon);
+        }
+      }
+      trackGrid.appendChild(cell);
+    }
+  }
+
+  document.getElementById('trackBuildBtn').addEventListener('click', buildTrack);
+  document.getElementById('trackPrintBtn').addEventListener('click', ()=> window.print());
+  trackTitle.addEventListener('input', ()=> trackTitleDisplay.textContent = trackTitle.value || 'Race Track');
+
+  /* ---------------- word grid ---------------- */
+  const gridTitle = document.getElementById('gridTitle');
+  const gridTitleDisplay = document.getElementById('gridTitleDisplay');
+  const gridRows = document.getElementById('gridRows');
+  const gridCols = document.getElementById('gridCols');
+  const gridFree = document.getElementById('gridFree');
+  const gridWords = document.getElementById('gridWords');
+  const wordGrid = document.getElementById('wordGrid');
+
+  let currentWords = [];
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function buildGrid(reshuffleOnly){
+    const rows = parseInt(gridRows.value,10);
+    const cols = parseInt(gridCols.value,10);
+    const total = rows*cols;
+    const useFree = gridFree.checked && (total % 2 === 1);
+
+    gridTitleDisplay.textContent = gridTitle.value || 'Word Grid';
+    wordGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    wordGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+    if(!reshuffleOnly){
+      currentWords = gridWords.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    }
+
+    const needed = useFree ? total-1 : total;
+    let pool = shuffle(currentWords);
+    while(pool.length < needed && currentWords.length > 0){
+      pool = pool.concat(shuffle(currentWords));
+    }
+    pool = pool.slice(0, needed);
+
+    wordGrid.innerHTML = '';
+    const centerIndex = Math.floor(total/2);
+    let w = 0;
+    for(let i=0;i<total;i++){
+      const cell = document.createElement('div');
+      cell.className = 'word-cell';
+      if(useFree && i === centerIndex){
+        cell.classList.add('free');
+        cell.textContent = '★';
+      } else {
+        cell.textContent = pool[w] !== undefined ? pool[w] : '';
+        w++;
+      }
+      wordGrid.appendChild(cell);
+    }
+  }
+
+  document.getElementById('gridBuildBtn').addEventListener('click', ()=> buildGrid(false));
+  document.getElementById('gridShuffleBtn').addEventListener('click', ()=> buildGrid(true));
+  document.getElementById('gridPrintBtn').addEventListener('click', ()=> window.print());
+  gridTitle.addEventListener('input', ()=> gridTitleDisplay.textContent = gridTitle.value || 'Word Grid');
+
+  buildTrack();
+  buildGrid(false);
+</script>
+
+</body>
+</html>

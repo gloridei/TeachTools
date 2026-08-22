@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Match — Chalk &amp; Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+  .setup-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 720px){ .setup-grid{ grid-template-columns: 1fr; } }
+
+  .mode-row{
+    display:flex; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .mode-btn{
+    flex:1;
+    font-family: var(--font-mono);
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    background: var(--board-deep);
+    color: var(--chalk-dim);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 8px;
+    padding: 10px 8px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .mode-btn.active{
+    background: var(--chalk-yellow);
+    color: #2a2210;
+    border-color: transparent;
+  }
+  .mode-hint{
+    font-size: .82rem;
+    color: var(--chalk-dim);
+    margin: 2px 0 0;
+  }
+  .stat-row{
+    display:flex; gap: 26px; justify-content:center;
+    font-family: var(--font-mono);
+    font-size: .82rem;
+    color: var(--chalk-dim);
+    margin: 4px 0 20px;
+  }
+  .stat-row b{ color: var(--chalk-yellow); font-size: 1rem; }
+
+  .memory-board{
+    display:grid;
+    gap: 12px;
+    justify-content:center;
+    perspective: 900px;
+  }
+  .memory-card{
+    width: 100%;
+    aspect-ratio: 4/3;
+    position: relative;
+    cursor:pointer;
+  }
+  .memory-card .flip-inner{
+    width:100%; height:100%;
+    position:relative;
+    transform-style: preserve-3d;
+    transition: transform .45s cubic-bezier(.2,.7,.3,1.2);
+  }
+  .memory-card.revealed .flip-inner,
+  .memory-card.matched .flip-inner{ transform: rotateY(180deg); }
+  .memory-card .side{
+    position:absolute; inset:0;
+    border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+    padding: 6px;
+    backface-visibility: hidden;
+    font-weight:600;
+    font-size: clamp(.75rem, 2.2vw, 1.05rem);
+    line-height:1.2;
+    box-shadow: 0 6px 14px rgba(0,0,0,.35);
+  }
+  .memory-card .back{
+    background: linear-gradient(160deg, #33473c, #24332B);
+    border: 2px solid rgba(243,241,231,.15);
+    color: var(--chalk-yellow);
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+  }
+  .memory-card .front{
+    background: var(--chalk);
+    color: #20241c;
+    transform: rotateY(180deg);
+    border: 2px solid rgba(0,0,0,.1);
+  }
+  .memory-card.matched .front{
+    background: #d9ecd6;
+    border-color: #6fae66;
+  }
+  .memory-card.mismatch .front{
+    background: #f3d0c9;
+  }
+  .win-banner{
+    text-align:center;
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    color: var(--chalk-yellow);
+    min-height: 1.4em;
+    margin-top: 22px;
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <nav class="top-nav">
+    <a class="brand" href="../index.html"><span class="brand-name">Chalk &amp; Board</span></a>
+    <a class="back-link" href="../index.html">← All tools</a>
+  </nav>
+
+  <section class="hero">
+    <h1>Memory <span class="accent">Match</span></h1>
+    <p>Add your words, deal the board, and find the pairs. Works on the projector for whole-class play, or on a tablet for pairs.</p>
+  </section>
+
+  <div class="panel stack no-print">
+    <div class="setup-grid">
+      <div class="stack">
+        <div>
+          <div class="mode-row">
+            <button class="mode-btn active" data-mode="same">Match identical words</button>
+            <button class="mode-btn" data-mode="pairs">Match word ↔ meaning</button>
+          </div>
+          <p class="mode-hint" id="modeHint">One word per line. Each word is dealt twice — find the two matching cards.</p>
+        </div>
+        <div>
+          <label for="wordsArea" id="wordsLabel">Words (one per line)</label>
+          <textarea id="wordsArea" rows="10">apple
+bicycle
+weather
+holiday
+kitchen
+bridge
+mountain
+airport</textarea>
+        </div>
+      </div>
+      <div class="stack">
+        <div>
+          <label for="cardsPerRow">Cards per row</label>
+          <select id="cardsPerRow">
+            <option value="4">4</option>
+            <option value="5" selected>5</option>
+            <option value="6">6</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="dealBtn">Deal the board</button>
+          <button class="btn secondary" id="shuffleBtn">Reshuffle same words</button>
+        </div>
+        <div class="stat-row">
+          <div>Moves: <b id="movesCount">0</b></div>
+          <div>Pairs found: <b id="matchesCount">0</b> / <b id="totalPairs">0</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="memory-board" id="memoryBoard"></div>
+  <div class="win-banner" id="winBanner">&nbsp;</div>
+
+  <footer class="site-footer no-print">Chalk &amp; Board — a free toolkit for ESL teachers</footer>
+</div>
+
+<script>
+  const modeBtns = document.querySelectorAll('.mode-btn');
+  const modeHint = document.getElementById('modeHint');
+  const wordsLabel = document.getElementById('wordsLabel');
+  const wordsArea = document.getElementById('wordsArea');
+  const cardsPerRow = document.getElementById('cardsPerRow');
+  const dealBtn = document.getElementById('dealBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const board = document.getElementById('memoryBoard');
+  const movesCount = document.getElementById('movesCount');
+  const matchesCount = document.getElementById('matchesCount');
+  const totalPairsEl = document.getElementById('totalPairs');
+  const winBanner = document.getElementById('winBanner');
+
+  let mode = 'same';
+  let pairs = [];      // array of {a, b, pairId}
+  let deck = [];        // array of {text, pairId}
+  let flipped = [];     // currently revealed, unmatched card elements
+  let busy = false;
+  let moves = 0, matched = 0;
+
+  const MODE_TEXT = {
+    same: {
+      hint: 'One word per line. Each word is dealt twice — find the two matching cards.',
+      label: 'Words (one per line)',
+      placeholder: 'apple\nbicycle\nweather'
+    },
+    pairs: {
+      hint: 'One pair per line, written as "word = meaning" — e.g. "apple = manzana". Each side is dealt once.',
+      label: 'Pairs (word = meaning, one per line)',
+      placeholder: 'apple = manzana\nbicycle = bicicleta'
+    }
+  };
+
+  modeBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      modeBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      mode = btn.dataset.mode;
+      modeHint.textContent = MODE_TEXT[mode].hint;
+      wordsLabel.textContent = MODE_TEXT[mode].label;
+    });
+  });
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function buildPairs(){
+    const lines = wordsArea.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    pairs = [];
+    if(mode === 'same'){
+      lines.forEach((word, i)=> pairs.push({ a: word, b: word, id: i }));
+    } else {
+      lines.forEach((line, i)=>{
+        const parts = line.split('=');
+        if(parts.length >= 2){
+          const a = parts[0].trim();
+          const b = parts.slice(1).join('=').trim();
+          if(a && b) pairs.push({ a, b, id: i });
+        }
+      });
+    }
+    return pairs;
+  }
+
+  function dealBoard(reuseExistingPairs){
+    if(!reuseExistingPairs) buildPairs();
+    if(pairs.length === 0){
+      board.innerHTML = '<p class="mono" style="text-align:center; color:var(--chalk-dim); grid-column:1/-1;">Add some words on the left, then deal the board.</p>';
+      totalPairsEl.textContent = 0;
+      return;
+    }
+
+    deck = [];
+    pairs.forEach(p=>{
+      deck.push({ text: p.a, pairId: p.id });
+      deck.push({ text: p.b, pairId: p.id });
+    });
+    deck = shuffle(deck);
+
+    moves = 0; matched = 0; flipped = []; busy = false;
+    movesCount.textContent = moves;
+    matchesCount.textContent = matched;
+    totalPairsEl.textContent = pairs.length;
+    winBanner.textContent = '\u00A0';
+
+    const cols = parseInt(cardsPerRow.value, 10);
+    board.style.gridTemplateColumns = `repeat(${cols}, minmax(70px, 1fr))`;
+    board.innerHTML = '';
+
+    deck.forEach((card, index)=>{
+      const el = document.createElement('div');
+      el.className = 'memory-card';
+      el.dataset.pairId = card.pairId;
+      el.dataset.index = index;
+      el.innerHTML = `
+        <div class="flip-inner">
+          <div class="side back">?</div>
+          <div class="side front">${escapeHtml(card.text)}</div>
+        </div>`;
+      el.addEventListener('click', ()=> revealCard(el));
+      board.appendChild(el);
+    });
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function revealCard(el){
+    if(busy) return;
+    if(el.classList.contains('revealed') || el.classList.contains('matched')) return;
+    if(flipped.length === 2) return;
+
+    el.classList.add('revealed');
+    flipped.push(el);
+
+    if(flipped.length === 2){
+      moves++;
+      movesCount.textContent = moves;
+      busy = true;
+      const [c1, c2] = flipped;
+      const isMatch = c1.dataset.pairId === c2.dataset.pairId;
+
+      if(isMatch){
+        setTimeout(()=>{
+          c1.classList.add('matched');
+          c2.classList.add('matched');
+          c1.classList.remove('revealed');
+          c2.classList.remove('revealed');
+          flipped = [];
+          busy = false;
+          matched++;
+          matchesCount.textContent = matched;
+          if(matched === pairs.length){
+            winBanner.textContent = `All matched in ${moves} moves!`;
+          }
+        }, 500);
+      } else {
+        c1.classList.add('mismatch');
+        c2.classList.add('mismatch');
+        setTimeout(()=>{
+          c1.classList.remove('revealed','mismatch');
+          c2.classList.remove('revealed','mismatch');
+          flipped = [];
+          busy = false;
+        }, 900);
+      }
+    }
+  }
+
+  dealBtn.addEventListener('click', ()=> dealBoard(false));
+  shuffleBtn.addEventListener('click', ()=> dealBoard(true));
+  cardsPerRow.addEventListener('change', ()=> dealBoard(true));
+
+  dealBoard(false);
+</script>
+
+</body>
+</html>
