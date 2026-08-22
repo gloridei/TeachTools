@@ -70,12 +70,74 @@
     text-align:center;
     padding: 3px;
     background: #fff;
+    position:relative;
   }
   .track-cell .num{ font-size: .95rem; }
-  .track-cell .icon{ font-size: 1rem; margin-top:2px; }
+  .track-cell .badge{ font-size: 1rem; }
+  .track-cell .task-text{
+    font-family: var(--font-body);
+    font-weight:600;
+    font-size: .6rem;
+    line-height: 1.15;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding: 0 2px;
+  }
   .track-cell.start{ background: #d9ecd6; }
   .track-cell.finish{ background: #f3d0c9; }
   .track-cell.special{ background: #fdeec2; }
+  .track-cell.task{ background: #e8f0f7; }
+  .track-cell .pawns{
+    position:absolute; inset:auto 2px 2px 2px;
+    display:flex; flex-wrap:wrap; gap:2px; justify-content:center;
+  }
+  .pawn{
+    width: 15px; height:15px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-mono); font-size:.5rem; font-weight:700;
+    color:#20241c; border: 1.5px solid rgba(0,0,0,.35);
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+
+  /* ---- game panel (players + dice) ---- */
+  .game-panel{
+    background: var(--board-light);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .game-panel h3{
+    font-family: var(--font-mono); font-size:.78rem;
+    text-transform:uppercase; letter-spacing:.06em;
+    color: var(--chalk-yellow); margin: 0 0 12px;
+  }
+  .player-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+  .player-chip{
+    display:flex; align-items:center; gap:7px;
+    background: rgba(255,255,255,.06);
+    border: 2px solid transparent;
+    border-radius: 30px;
+    padding: 6px 12px 6px 8px;
+    font-family: var(--font-mono); font-size:.75rem;
+  }
+  .player-chip.turn{ border-color: var(--chalk-yellow); background: rgba(232,192,95,.12); }
+  .player-chip .dot{ width:14px; height:14px; border-radius:50%; flex:none; }
+  .player-chip.done{ opacity:.5; text-decoration: line-through; }
+  .dice-row{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  #diceFace{
+    width: 52px; height:52px; border-radius: 10px;
+    background: var(--chalk); color:#20241c;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-mono); font-size:1.6rem; font-weight:700;
+    box-shadow: var(--shadow);
+  }
+  #gameMsg{
+    font-family: var(--font-body); font-size:.92rem;
+    color: var(--chalk-dim); min-height: 1.3em;
+  }
+  .field.narrow{ width: 120px; }
 
   /* ---- word grid ---- */
   .grid-sheet{
@@ -148,8 +210,45 @@
             <option value="10">10 per row</option>
           </select>
         </div>
+        <div class="field narrow">
+          <label for="trackPlayers">Players</label>
+          <select id="trackPlayers">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </div>
         <button class="btn secondary" id="trackBuildBtn">Build board</button>
         <button class="btn" id="trackPrintBtn">Print</button>
+      </div>
+
+      <div class="config-row no-print">
+        <div class="field wide" style="width:100%;">
+          <label for="trackTasks">Tasks / questions (one per line — every empty space gets one, repeating if the list is shorter than the board)</label>
+          <textarea id="trackTasks" rows="5">Ask a classmate about their weekend.
+Spell your last name out loud.
+Name three animals in 5 seconds.
+Make a sentence with the word "although".
+Say today's date in English.
+Describe your favorite food.
+Talk about your morning routine.
+Give a compliment to another player.
+Name three colors in English.
+Ask "What time is it?" to a classmate.</textarea>
+        </div>
+      </div>
+
+      <div class="game-panel no-print">
+        <h3>Play</h3>
+        <div class="player-row" id="playerRow"></div>
+        <div class="dice-row">
+          <div id="diceFace">–</div>
+          <button class="btn" id="rollBtn">Roll dice</button>
+          <button class="btn secondary" id="resetGameBtn">Reset game</button>
+          <div id="gameMsg"></div>
+        </div>
       </div>
 
       <div class="track-sheet">
@@ -238,27 +337,49 @@ sandwich</textarea>
   const trackSpaces = document.getElementById('trackSpaces');
   const trackCols = document.getElementById('trackCols');
   const trackGrid = document.getElementById('trackGrid');
+  const trackTasks = document.getElementById('trackTasks');
+  const trackPlayersSelect = document.getElementById('trackPlayers');
+  const playerRow = document.getElementById('playerRow');
+  const diceFace = document.getElementById('diceFace');
+  const gameMsg = document.getElementById('gameMsg');
+  const rollBtn = document.getElementById('rollBtn');
 
-  const SPECIAL_ICONS = ['⭐ Bonus turn', '⏳ Miss a turn', '↺ Back 2 spaces', '🎁 Swap places'];
+  const SPECIAL_TYPES = [
+    { icon:'⭐', label:'Bonus turn' },
+    { icon:'⏳', label:'Miss a turn' },
+    { icon:'↺', label:'Back 2 spaces' },
+    { icon:'🎁', label:'Swap places' }
+  ];
+  const PLAYER_COLORS = ['#e8c05f','#e2836f','#8db4d4','#a9c98f','#c9a9d9','#f0b6c2'];
+
+  let cellByIndex = [];   // DOM element for each game index
+  let trackMeta = [];     // { type, special?, task? }
+  let players = [];
+  let turnIndex = 0;
+  let totalSpaces = 0;
 
   function buildTrack(){
     const total = Math.max(12, Math.min(60, parseInt(trackSpaces.value,10) || 30));
     const cols = parseInt(trackCols.value, 10);
     const rows = Math.ceil(total/cols);
+    totalSpaces = total;
     trackTitleDisplay.textContent = trackTitle.value || 'Race Track';
     trackGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     trackGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
     trackGrid.innerHTML = '';
+    cellByIndex = new Array(total).fill(null);
+    trackMeta = new Array(total).fill(null);
+
+    const tasks = trackTasks.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    let taskCursor = 0;
 
     // build placement array so print order follows a snake path visually
     const cellsByPosition = new Array(rows*cols).fill(null);
-
     for(let index=0; index<total; index++){
       const row = Math.floor(index/cols);
       let posInRow = index % cols;
       if(row % 2 === 1) posInRow = cols-1-posInRow;
-      const gridIndex = row*cols + posInRow;
-      cellsByPosition[gridIndex] = index;
+      cellsByPosition[row*cols + posInRow] = index;
     }
 
     let specialCounter = 0;
@@ -269,33 +390,183 @@ sandwich</textarea>
       if(index === null){
         cell.style.visibility = 'hidden';
       } else {
-        const num = index+1;
         const isStart = index === 0;
         const isFinish = index === total-1;
-        const isSpecial = !isStart && !isFinish && (num % 5 === 0);
-        if(isStart) cell.classList.add('start');
-        else if(isFinish) cell.classList.add('finish');
-        else if(isSpecial) cell.classList.add('special');
+        const isSpecial = !isStart && !isFinish && ((index+1) % 5 === 0);
 
-        const numSpan = document.createElement('div');
-        numSpan.className = 'num';
-        numSpan.textContent = isStart ? 'START' : (isFinish ? 'FINISH' : num);
-        cell.appendChild(numSpan);
-
-        if(isSpecial){
-          const icon = document.createElement('div');
-          icon.className = 'icon';
-          icon.textContent = SPECIAL_ICONS[specialCounter % SPECIAL_ICONS.length];
+        if(isStart){
+          cell.classList.add('start');
+          trackMeta[index] = {type:'start'};
+          const label = document.createElement('div');
+          label.className = 'num';
+          label.textContent = 'START';
+          cell.appendChild(label);
+        } else if(isFinish){
+          cell.classList.add('finish');
+          trackMeta[index] = {type:'finish'};
+          const label = document.createElement('div');
+          label.className = 'num';
+          label.textContent = 'FINISH';
+          cell.appendChild(label);
+        } else if(isSpecial){
+          cell.classList.add('special');
+          const special = SPECIAL_TYPES[specialCounter % SPECIAL_TYPES.length];
           specialCounter++;
-          cell.appendChild(icon);
+          trackMeta[index] = {type:'special', special};
+          const badge = document.createElement('div');
+          badge.className = 'badge';
+          badge.textContent = special.icon;
+          cell.appendChild(badge);
+          const label = document.createElement('div');
+          label.style.fontSize = '.55rem';
+          label.style.fontFamily = 'var(--font-body)';
+          label.textContent = special.label;
+          cell.appendChild(label);
+        } else {
+          // every remaining ("empty") space gets a task written right on it
+          cell.classList.add('task');
+          let task = '';
+          if(tasks.length){
+            task = tasks[taskCursor % tasks.length];
+            taskCursor++;
+          }
+          trackMeta[index] = {type:'task', task};
+          const taskEl = document.createElement('div');
+          taskEl.className = 'task-text';
+          taskEl.textContent = task;
+          cell.appendChild(taskEl);
         }
+
+        const pawnHolder = document.createElement('div');
+        pawnHolder.className = 'pawns';
+        cell.appendChild(pawnHolder);
+        cellByIndex[index] = cell;
       }
       trackGrid.appendChild(cell);
     }
+
+    setupPlayers();
+  }
+
+  function setupPlayers(){
+    const count = parseInt(trackPlayersSelect.value, 10);
+    players = [];
+    for(let i=0;i<count;i++){
+      players.push({ id:i, color: PLAYER_COLORS[i % PLAYER_COLORS.length], pos:0, skipNext:false, finished:false });
+    }
+    turnIndex = 0;
+    diceFace.textContent = '–';
+    rollBtn.disabled = false;
+    gameMsg.textContent = 'Player 1\'s turn — click "Roll dice" to start.';
+    renderPlayers();
+    renderPawns();
+  }
+
+  function renderPlayers(){
+    playerRow.innerHTML = '';
+    players.forEach((p, i)=>{
+      const chip = document.createElement('div');
+      chip.className = 'player-chip' + (i===turnIndex && !p.finished ? ' turn':'') + (p.finished ? ' done':'');
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.style.background = p.color;
+      chip.appendChild(dot);
+      chip.appendChild(document.createTextNode('Player ' + (i+1) + (p.finished ? ' 🏁' : '')));
+      playerRow.appendChild(chip);
+    });
+  }
+
+  function renderPawns(){
+    cellByIndex.forEach(cell=>{
+      if(cell) cell.querySelector('.pawns').innerHTML = '';
+    });
+    players.forEach((p,i)=>{
+      const cell = cellByIndex[p.pos];
+      if(!cell) return;
+      const pawn = document.createElement('div');
+      pawn.className = 'pawn';
+      pawn.style.background = p.color;
+      pawn.textContent = 'P' + (i+1);
+      cell.querySelector('.pawns').appendChild(pawn);
+    });
+  }
+
+  function nextTurn(){
+    if(players.every(p=>p.finished)){
+      gameMsg.textContent = '🎉 Game over — everyone finished!';
+      rollBtn.disabled = true;
+      return;
+    }
+    do{
+      turnIndex = (turnIndex+1) % players.length;
+    } while(players[turnIndex].finished);
+    const p = players[turnIndex];
+    if(p.skipNext){
+      p.skipNext = false;
+      gameMsg.textContent = 'Player ' + (turnIndex+1) + ' misses a turn (⏳) — skipping.';
+      renderPlayers();
+      setTimeout(nextTurn, 900);
+      return;
+    }
+    gameMsg.textContent = 'Player ' + (turnIndex+1) + '\'s turn — roll the dice.';
+    renderPlayers();
+  }
+
+  function rollDice(){
+    if(rollBtn.disabled) return;
+    const roll = 1 + Math.floor(Math.random()*6);
+    diceFace.textContent = roll;
+    const p = players[turnIndex];
+    p.pos = Math.min(totalSpaces-1, p.pos + roll);
+    renderPawns();
+
+    const meta = trackMeta[p.pos];
+    if(meta.type === 'finish'){
+      p.finished = true;
+      gameMsg.textContent = '🏁 Player ' + (turnIndex+1) + ' reached the finish!';
+      renderPlayers();
+      setTimeout(nextTurn, 1000);
+      return;
+    }
+    if(meta.type === 'special'){
+      const s = meta.special.label;
+      if(s === 'Bonus turn'){
+        gameMsg.textContent = '⭐ Player ' + (turnIndex+1) + ' rolled a bonus turn — roll again!';
+        return;
+      } else if(s === 'Miss a turn'){
+        p.skipNext = true;
+        gameMsg.textContent = '⏳ Player ' + (turnIndex+1) + ' landed on Miss a Turn.';
+      } else if(s === 'Back 2 spaces'){
+        p.pos = Math.max(0, p.pos-2);
+        gameMsg.textContent = '↺ Player ' + (turnIndex+1) + ' goes back 2 spaces.';
+        renderPawns();
+      } else if(s === 'Swap places'){
+        const others = players.filter((pl,i)=> i!==turnIndex && !pl.finished);
+        if(others.length){
+          const other = others[Math.floor(Math.random()*others.length)];
+          const tmp = other.pos;
+          other.pos = p.pos;
+          p.pos = tmp;
+          gameMsg.textContent = '🎁 Player ' + (turnIndex+1) + ' swapped places with Player ' + (other.id+1) + '!';
+          renderPawns();
+        }
+      }
+      setTimeout(nextTurn, 1200);
+      return;
+    }
+    if(meta.type === 'task' && meta.task){
+      gameMsg.textContent = '❓ Player ' + (turnIndex+1) + ': ' + meta.task;
+      setTimeout(nextTurn, 2200);
+      return;
+    }
+    setTimeout(nextTurn, 700);
   }
 
   document.getElementById('trackBuildBtn').addEventListener('click', buildTrack);
   document.getElementById('trackPrintBtn').addEventListener('click', ()=> window.print());
+  document.getElementById('resetGameBtn').addEventListener('click', setupPlayers);
+  rollBtn.addEventListener('click', rollDice);
+  trackPlayersSelect.addEventListener('change', setupPlayers);
   trackTitle.addEventListener('input', ()=> trackTitleDisplay.textContent = trackTitle.value || 'Race Track');
 
   /* ---------------- word grid ---------------- */
