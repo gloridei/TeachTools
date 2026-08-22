@@ -1,5 +1,5 @@
 /* ============================================================
-   Chalk & Board — a toolkit for ESL teachers
+   TeachTools — a toolkit for teachers
    Design tokens
    ============================================================ */
 :root{
@@ -51,9 +51,9 @@ a{ color: inherit; }
 
 /* ---------- layout shell ---------- */
 .frame{
-  max-width: 1100px;
+  width: 80%;
   margin: 0 auto;
-  padding: 28px 24px 48px;
+  padding: 28px 0 5vh;
   position: relative;
   z-index: 1;
 }
@@ -134,9 +134,9 @@ a{ color: inherit; }
 /* ---------- tool directory grid ---------- */
 .tool-grid{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
-  gap: 22px;
-  margin-top: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(210px,1fr));
+  gap: 20px;
+  margin-top: 38px;
 }
 
 .tool-card{
@@ -252,8 +252,8 @@ input:focus, textarea:focus, select:focus{ outline: 2px solid var(--chalk-yellow
 
 /* ---------- footer ---------- */
 .site-footer{
-  margin-top: 60px;
-  padding-top: 20px;
+  margin-top: 36px;
+  padding-top: 16px;
   border-top: 1px dashed rgba(243,241,231,.2);
   font-family: var(--font-mono);
   font-size: .72rem;
