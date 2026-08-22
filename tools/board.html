@@ -77,10 +77,10 @@
   .track-cell .task-text{
     font-family: var(--font-body);
     font-weight:600;
-    font-size: .6rem;
-    line-height: 1.15;
+    font-size: var(--task-font-size, .6rem);
+    line-height: 1.18;
     display: -webkit-box;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: var(--task-line-clamp, 4);
     -webkit-box-orient: vertical;
     overflow: hidden;
     padding: 0 2px;
@@ -457,6 +457,19 @@ sandwich</textarea>
     }
 
     setupPlayers();
+    sizeTaskText();
+  }
+
+  function sizeTaskText(){
+    const sampleCell = trackGrid.querySelector('.track-cell.task') || trackGrid.querySelector('.track-cell:not([style*="hidden"])');
+    if(!sampleCell) return;
+    const cellWidth = sampleCell.clientWidth;
+    // scale font relative to the actual rendered cell size, not viewport width,
+    // so it looks right regardless of space count, row width, or browser zoom
+    const fontPx = Math.max(9, Math.min(15, Math.round(cellWidth * 0.13)));
+    const clampLines = cellWidth < 70 ? 3 : (cellWidth < 100 ? 4 : 5);
+    trackGrid.style.setProperty('--task-font-size', fontPx + 'px');
+    trackGrid.style.setProperty('--task-line-clamp', clampLines);
   }
 
   function setupPlayers(){
@@ -579,6 +592,12 @@ sandwich</textarea>
   rollBtn.addEventListener('click', rollDice);
   trackPlayersSelect.addEventListener('change', setupPlayers);
   trackTitle.addEventListener('input', ()=> trackTitleDisplay.textContent = trackTitle.value || 'Race Track');
+
+  let resizeTimer;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(sizeTaskText, 150);
+  });
 
   /* ---------------- word grid ---------------- */
   const gridTitle = document.getElementById('gridTitle');
