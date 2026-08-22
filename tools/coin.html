@@ -75,17 +75,9 @@
 </style>
 </head>
 <body>
-
-<svg width="0" height="0" style="position:absolute">
-  <filter id="roughen" x="-20%" y="-20%" width="140%" height="140%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise"/>
-    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.4"/>
-  </filter>
-</svg>
-
 <div class="frame">
   <nav class="top-nav">
-    <a class="brand" href="index.html">
+    <a class="brand" href="../index.html">
       <svg class="brand-mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="4" y="8" width="40" height="28" rx="3" stroke="#f3f1e7" stroke-width="2.5" filter="url(#roughen)"/>
         <line x1="10" y1="20" x2="26" y2="20" stroke="#e8c05f" stroke-width="2.5" filter="url(#roughen)"/>
@@ -93,7 +85,7 @@
       </svg>
       <span class="brand-name">TeachTools</span>
     </a>
-    <span class="brand-tag">Tools for your classroom</span>
+    <a class="back-link" href="../index.html">← All tools</a>
   </nav>
 
   <section class="hero">
