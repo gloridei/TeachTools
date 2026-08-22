@@ -29,6 +29,8 @@ body{
   color: var(--chalk);
   font-family: var(--font-body);
   min-height: 100vh;
+  display:flex;
+  flex-direction: column;
   position: relative;
 }
 
@@ -56,6 +58,9 @@ a{ color: inherit; }
   padding: 28px 0 5vh;
   position: relative;
   z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .top-nav{
@@ -252,7 +257,7 @@ input:focus, textarea:focus, select:focus{ outline: 2px solid var(--chalk-yellow
 
 /* ---------- footer ---------- */
 .site-footer{
-  margin-top: 36px;
+  margin-top: auto;
   padding-top: 16px;
   border-top: 1px dashed rgba(243,241,231,.2);
   font-family: var(--font-mono);
