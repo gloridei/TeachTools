@@ -164,13 +164,13 @@ neighbor = house, next door, live, street</textarea>
 
     <div class="action-row" id="idleActions">
       <button class="btn" id="startRoundBtn" disabled>Start round</button>
-      <button class="btn secondary" id="resetMatchBtn">Reset match</button>
     </div>
 
     <div class="action-row" id="liveActions" style="display:none;">
       <button class="btn correct" id="correctBtn">✓ Correct</button>
       <button class="btn secondary" id="skipBtn">Skip</button>
       <button class="btn taboo" id="tabooBtn">Said a taboo word</button>
+      <button class="btn secondary" id="stopRoundBtn">Stop round</button>
     </div>
 
     <div class="action-row" id="endedActions" style="display:none;">
@@ -178,6 +178,10 @@ neighbor = house, next door, live, street</textarea>
     </div>
 
     <div class="round-msg" id="roundMsg">&nbsp;</div>
+
+    <div class="action-row" style="margin-top:4px;">
+      <button class="btn secondary" id="resetMatchBtn">Reset match</button>
+    </div>
   </div>
 
   <footer class="site-footer">TeachTools — a free toolkit for teachers
@@ -208,6 +212,7 @@ neighbor = house, next door, live, street</textarea>
   const skipBtn = document.getElementById('skipBtn');
   const tabooBtn = document.getElementById('tabooBtn');
   const swapBtn = document.getElementById('swapBtn');
+  const stopRoundBtn = document.getElementById('stopRoundBtn');
 
   let baseDeck = [];   // parsed {word, taboo:[]} from the textarea, fixed order
   let queue = [];       // shuffled working queue, refilled from baseDeck when empty
@@ -318,7 +323,6 @@ neighbor = house, next door, live, street</textarea>
     }
     stopTimer(); // defensive: make sure no previous interval is still running
     state = 'active';
-    buildBtn.disabled = true; // don't allow rebuilding the deck out from under a running timer
     remaining = parseInt(timerSelect.value, 10);
     timerDisplay.textContent = remaining;
     lookAwayNote.textContent = 'Guesser: look away — only the describer reads the screen!';
@@ -339,15 +343,22 @@ neighbor = house, next door, live, street</textarea>
   function endRound(reason){
     stopTimer();
     state = 'ended';
-    buildBtn.disabled = false;
+    timerDisplay.textContent = '–';
     lookAwayNote.textContent = '\u00A0';
     if(reason === 'outOfCards'){
       cardStage.innerHTML = '<p class="placeholder">Out of cards! Add more words above and rebuild to keep playing.</p>';
+    } else if(reason === 'manual'){
+      cardStage.innerHTML = '<p class="placeholder">Round stopped.</p>';
     } else {
       cardStage.innerHTML = '<p class="placeholder">Time\'s up!</p>';
     }
     roundMsg.textContent = players[clueGiverIndex].name + '\'s score this match: ' + players[clueGiverIndex].score;
     showActions('ended');
+  }
+
+  function stopRound(){
+    if(state !== 'active') return;
+    endRound('manual'); // let the teacher bail out of a round early without waiting for the timer
   }
 
   function scoreAndNext(delta){
@@ -377,6 +388,7 @@ neighbor = house, next door, live, street</textarea>
   skipBtn.addEventListener('click', ()=> scoreAndNext(-1));
   tabooBtn.addEventListener('click', ()=> scoreAndNext(-1));
   swapBtn.addEventListener('click', swapAndContinue);
+  stopRoundBtn.addEventListener('click', stopRound);
 
   buildDeckAndStartMatch();
 </script>
