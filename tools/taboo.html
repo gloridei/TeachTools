@@ -238,25 +238,29 @@ neighbor = house, next door, live, street</textarea>
     return a;
   }
 
-  function refillQueueIfNeeded(){
-    if(queue.length === 0 && baseDeck.length > 0){
-      queue = shuffle(baseDeck);
+  function stopTimer(){
+    if(timerId !== null){
+      clearInterval(timerId);
+      timerId = null;
     }
   }
 
   function buildDeckAndStartMatch(){
+    stopTimer(); // never leave a previous round's countdown running in the background
     baseDeck = parseDeck();
-    queue = shuffle(baseDeck);
+    queue = shuffle(baseDeck); // each card is used once; no reshuffle-and-repeat mid-match
     deckCountEl.textContent = baseDeck.length + (baseDeck.length === 1 ? ' card ready' : ' cards ready');
     players = [{ name: 'Player 1', score: 0 }, { name: 'Player 2', score: 0 }];
     clueGiverIndex = 0;
     state = 'idle';
+    remaining = 0;
     currentCard = null;
     roundMsg.textContent = '\u00A0';
     timerDisplay.textContent = '–';
     cardStage.innerHTML = '<p class="placeholder">Ready — press "Start round" when the Guesser is looking away.</p>';
     lookAwayNote.textContent = '\u00A0';
     startRoundBtn.disabled = baseDeck.length === 0;
+    buildBtn.disabled = false;
     showActions('idle');
     renderPlayers();
   }
@@ -288,17 +292,16 @@ neighbor = house, next door, live, street</textarea>
   }
 
   function showCard(){
-    refillQueueIfNeeded();
     if(queue.length === 0){
-      cardStage.innerHTML = '<p class="placeholder">No words in the deck — add some above and rebuild.</p>';
       currentCard = null;
-      return;
+      return false;
     }
     currentCard = queue.pop();
     cardStage.innerHTML = `
       <div class="target-word">${escapeHtml(currentCard.word)}</div>
       <div class="taboo-list">${currentCard.taboo.map(t=>`<span>${escapeHtml(t)}</span>`).join('')}</div>
     `;
+    return true;
   }
 
   function escapeHtml(str){
@@ -308,8 +311,14 @@ neighbor = house, next door, live, street</textarea>
   }
 
   function startRound(){
-    if(baseDeck.length === 0) return;
+    if(state === 'active') return; // guard against double-clicks/double-taps starting a second timer
+    if(queue.length === 0){
+      cardStage.innerHTML = '<p class="placeholder">No cards left in the deck — add more words above and rebuild to keep playing.</p>';
+      return;
+    }
+    stopTimer(); // defensive: make sure no previous interval is still running
     state = 'active';
+    buildBtn.disabled = true; // don't allow rebuilding the deck out from under a running timer
     remaining = parseInt(timerSelect.value, 10);
     timerDisplay.textContent = remaining;
     lookAwayNote.textContent = 'Guesser: look away — only the describer reads the screen!';
@@ -321,18 +330,22 @@ neighbor = house, next door, live, street</textarea>
 
   function tick(){
     remaining--;
-    timerDisplay.textContent = remaining;
+    timerDisplay.textContent = Math.max(remaining, 0); // never display negative time
     if(remaining <= 0){
-      endRound();
+      endRound('time');
     }
   }
 
-  function endRound(){
-    clearInterval(timerId);
-    timerId = null;
+  function endRound(reason){
+    stopTimer();
     state = 'ended';
-    cardStage.innerHTML = '<p class="placeholder">Time\'s up!</p>';
+    buildBtn.disabled = false;
     lookAwayNote.textContent = '\u00A0';
+    if(reason === 'outOfCards'){
+      cardStage.innerHTML = '<p class="placeholder">Out of cards! Add more words above and rebuild to keep playing.</p>';
+    } else {
+      cardStage.innerHTML = '<p class="placeholder">Time\'s up!</p>';
+    }
     roundMsg.textContent = players[clueGiverIndex].name + '\'s score this match: ' + players[clueGiverIndex].score;
     showActions('ended');
   }
@@ -341,7 +354,10 @@ neighbor = house, next door, live, street</textarea>
     if(state !== 'active') return;
     players[clueGiverIndex].score += delta;
     renderPlayers();
-    showCard();
+    const hasCard = showCard();
+    if(!hasCard){
+      endRound('outOfCards'); // ran out of unique cards mid-round instead of repeating
+    }
   }
 
   function swapAndContinue(){
