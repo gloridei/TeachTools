@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Play Taboo — TeachTools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>
+  .setup-grid{
+    display:grid;
+    grid-template-columns: 1fr 220px;
+    gap: 20px;
+    align-items:flex-end;
+  }
+  @media (max-width: 720px){ .setup-grid{ grid-template-columns: 1fr; } }
+  .deck-count{
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    color: var(--chalk-dim);
+    margin-top: -10px;
+  }
+
+  .game-panel{
+    margin-top: 20px;
+  }
+  .player-row{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-bottom: 18px; }
+  .player-chip{
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    background: rgba(255,255,255,.06);
+    border: 2px solid transparent;
+    border-radius: 14px;
+    padding: 10px 20px;
+    font-family: var(--font-mono); font-size:.78rem;
+    min-width: 130px;
+  }
+  .player-chip.giving{ border-color: var(--chalk-yellow); background: rgba(232,192,95,.12); }
+  .player-chip .role{
+    font-size: .66rem; letter-spacing:.08em; text-transform:uppercase;
+    color: var(--chalk-yellow); min-height: 1em;
+  }
+  .player-chip .score{ font-size: 1.4rem; color: var(--chalk); font-weight:700; }
+
+  .card-stage{
+    background: #f3f1e7;
+    border-radius: var(--radius);
+    padding: 34px 24px;
+    text-align:center;
+    color: #20241c;
+    min-height: 220px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 14px;
+  }
+  .card-stage .placeholder{
+    font-family: var(--font-body);
+    color: #5b5b52;
+    font-size: 1rem;
+    max-width: 40ch;
+  }
+  .target-word{
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    line-height: 1;
+    color: #20241c;
+  }
+  .taboo-list{
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+  }
+  .taboo-list span{
+    font-family: var(--font-mono);
+    font-size: .82rem;
+    background: #f3d0c9;
+    color: #5e2418;
+    border-radius: 20px;
+    padding: 5px 12px;
+  }
+  .look-away{
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    letter-spacing:.06em;
+    text-transform: uppercase;
+    color: var(--chalk-coral);
+    text-align:center;
+    margin-top: 10px;
+  }
+
+  .timer-display{
+    font-family: var(--font-mono);
+    font-size: 2.2rem;
+    text-align:center;
+    color: var(--chalk-yellow);
+    margin: 16px 0 4px;
+  }
+  .round-msg{
+    text-align:center;
+    font-family: var(--font-body);
+    color: var(--chalk-dim);
+    min-height: 1.4em;
+    margin-top: 10px;
+  }
+  .action-row{
+    display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
+    margin-top: 6px;
+  }
+  .btn.correct{ background: #9fcf9a; box-shadow: 0 4px 0 #6fa068, 0 6px 14px rgba(0,0,0,.35); color:#183314; }
+  .btn.taboo{ background: #f3d0c9; box-shadow: 0 4px 0 #b98c81, 0 6px 14px rgba(0,0,0,.35); color:#5e2418; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <nav class="top-nav">
+    <a class="brand" href="../index.html">
+      <svg class="brand-mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="8" width="40" height="28" rx="3" stroke="#f3f1e7" stroke-width="2.5" filter="url(#roughen)"/>
+        <line x1="10" y1="20" x2="26" y2="20" stroke="#e8c05f" stroke-width="2.5" filter="url(#roughen)"/>
+        <line x1="10" y1="27" x2="20" y2="27" stroke="#e8c05f" stroke-width="2.5" filter="url(#roughen)"/>
+      </svg>
+      <span class="brand-name">TeachTools</span>
+    </a>
+    <a class="back-link" href="../index.html">← All tools</a>
+  </nav>
+
+  <section class="hero">
+    <h1>Play <span class="accent">Taboo</span></h1>
+    <p>One device, two players. One describes, one guesses — without saying the forbidden words. Great for speaking practice on a shared vocabulary list.</p>
+  </section>
+
+  <div class="panel stack">
+    <div class="setup-grid">
+      <div>
+        <label for="wordsArea">Words (one per line — format: <code>word = taboo1, taboo2, taboo3</code>)</label>
+        <textarea id="wordsArea" rows="6">holiday = beach, trip, vacation, travel
+kitchen = cook, food, stove, sink
+bicycle = wheels, ride, pedal, bike
+weather = rain, sun, temperature, forecast
+neighbor = house, next door, live, street</textarea>
+      </div>
+      <div class="stack" style="gap:14px;">
+        <div>
+          <label for="timerSelect">Round length</label>
+          <select id="timerSelect">
+            <option value="30">30 seconds</option>
+            <option value="60" selected>60 seconds</option>
+            <option value="90">90 seconds</option>
+          </select>
+        </div>
+        <button class="btn" id="buildBtn">Build deck &amp; start match</button>
+      </div>
+    </div>
+    <div class="deck-count" id="deckCount">0 cards ready</div>
+  </div>
+
+  <div class="panel stack game-panel">
+    <div class="player-row" id="playerRow"></div>
+
+    <div class="card-stage" id="cardStage">
+      <p class="placeholder">Build a deck above, then press "Start round" when the Guesser is looking away.</p>
+    </div>
+    <div class="look-away" id="lookAwayNote">&nbsp;</div>
+
+    <div class="timer-display" id="timerDisplay">–</div>
+
+    <div class="action-row" id="idleActions">
+      <button class="btn" id="startRoundBtn" disabled>Start round</button>
+      <button class="btn secondary" id="resetMatchBtn">Reset match</button>
+    </div>
+
+    <div class="action-row" id="liveActions" style="display:none;">
+      <button class="btn correct" id="correctBtn">✓ Correct</button>
+      <button class="btn secondary" id="skipBtn">Skip</button>
+      <button class="btn taboo" id="tabooBtn">Said a taboo word</button>
+    </div>
+
+    <div class="action-row" id="endedActions" style="display:none;">
+      <button class="btn" id="swapBtn">Swap roles &amp; continue</button>
+    </div>
+
+    <div class="round-msg" id="roundMsg">&nbsp;</div>
+  </div>
+
+  <footer class="site-footer">TeachTools — a free toolkit for teachers
+    <div class="footer-links">
+      <a class="footer-link" href="https://github.com/gloridei/TeachTools/issues/new" target="_blank" rel="noopener">Report a bug</a>
+      <a class="footer-link donate" href='https://ko-fi.com/G4N125JMWS' target='_blank' rel="noopener" style="padding:4px 10px;"><img height='28' style='border:0;height:28px;display:block;' src='https://storage.ko-fi.com/cdn/kofi6.png?v=6' alt='Support me on Ko-fi' /></a>    </div>
+  </footer>
+</div>
+
+<script>
+  const wordsArea = document.getElementById('wordsArea');
+  const timerSelect = document.getElementById('timerSelect');
+  const buildBtn = document.getElementById('buildBtn');
+  const deckCountEl = document.getElementById('deckCount');
+
+  const playerRow = document.getElementById('playerRow');
+  const cardStage = document.getElementById('cardStage');
+  const lookAwayNote = document.getElementById('lookAwayNote');
+  const timerDisplay = document.getElementById('timerDisplay');
+  const roundMsg = document.getElementById('roundMsg');
+
+  const idleActions = document.getElementById('idleActions');
+  const liveActions = document.getElementById('liveActions');
+  const endedActions = document.getElementById('endedActions');
+  const startRoundBtn = document.getElementById('startRoundBtn');
+  const resetMatchBtn = document.getElementById('resetMatchBtn');
+  const correctBtn = document.getElementById('correctBtn');
+  const skipBtn = document.getElementById('skipBtn');
+  const tabooBtn = document.getElementById('tabooBtn');
+  const swapBtn = document.getElementById('swapBtn');
+
+  let baseDeck = [];   // parsed {word, taboo:[]} from the textarea, fixed order
+  let queue = [];       // shuffled working queue, refilled from baseDeck when empty
+  let currentCard = null;
+  let players = [{ name: 'Player 1', score: 0 }, { name: 'Player 2', score: 0 }];
+  let clueGiverIndex = 0;
+  let remaining = 0;
+  let timerId = null;
+  let state = 'idle'; // 'idle' | 'active' | 'ended'
+
+  function parseDeck(){
+    return wordsArea.value.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{
+      const [wordPart, tabooPart] = line.split('=');
+      if(!wordPart || !tabooPart) return null;
+      const word = wordPart.trim();
+      const taboo = tabooPart.split(',').map(t=>t.trim()).filter(Boolean);
+      if(!word || taboo.length === 0) return null;
+      return { word, taboo };
+    }).filter(Boolean);
+  }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function refillQueueIfNeeded(){
+    if(queue.length === 0 && baseDeck.length > 0){
+      queue = shuffle(baseDeck);
+    }
+  }
+
+  function buildDeckAndStartMatch(){
+    baseDeck = parseDeck();
+    queue = shuffle(baseDeck);
+    deckCountEl.textContent = baseDeck.length + (baseDeck.length === 1 ? ' card ready' : ' cards ready');
+    players = [{ name: 'Player 1', score: 0 }, { name: 'Player 2', score: 0 }];
+    clueGiverIndex = 0;
+    state = 'idle';
+    currentCard = null;
+    roundMsg.textContent = '\u00A0';
+    timerDisplay.textContent = '–';
+    cardStage.innerHTML = '<p class="placeholder">Ready — press "Start round" when the Guesser is looking away.</p>';
+    lookAwayNote.textContent = '\u00A0';
+    startRoundBtn.disabled = baseDeck.length === 0;
+    showActions('idle');
+    renderPlayers();
+  }
+
+  function renderPlayers(){
+    playerRow.innerHTML = '';
+    players.forEach((p, i)=>{
+      const chip = document.createElement('div');
+      chip.className = 'player-chip' + (i === clueGiverIndex ? ' giving' : '');
+      const role = document.createElement('div');
+      role.className = 'role';
+      role.textContent = i === clueGiverIndex ? 'Describing' : 'Guessing';
+      const name = document.createElement('div');
+      name.textContent = p.name;
+      const score = document.createElement('div');
+      score.className = 'score';
+      score.textContent = p.score;
+      chip.appendChild(role);
+      chip.appendChild(name);
+      chip.appendChild(score);
+      playerRow.appendChild(chip);
+    });
+  }
+
+  function showActions(which){
+    idleActions.style.display = which === 'idle' ? 'flex' : 'none';
+    liveActions.style.display = which === 'active' ? 'flex' : 'none';
+    endedActions.style.display = which === 'ended' ? 'flex' : 'none';
+  }
+
+  function showCard(){
+    refillQueueIfNeeded();
+    if(queue.length === 0){
+      cardStage.innerHTML = '<p class="placeholder">No words in the deck — add some above and rebuild.</p>';
+      currentCard = null;
+      return;
+    }
+    currentCard = queue.pop();
+    cardStage.innerHTML = `
+      <div class="target-word">${escapeHtml(currentCard.word)}</div>
+      <div class="taboo-list">${currentCard.taboo.map(t=>`<span>${escapeHtml(t)}</span>`).join('')}</div>
+    `;
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function startRound(){
+    if(baseDeck.length === 0) return;
+    state = 'active';
+    remaining = parseInt(timerSelect.value, 10);
+    timerDisplay.textContent = remaining;
+    lookAwayNote.textContent = 'Guesser: look away — only the describer reads the screen!';
+    roundMsg.textContent = '\u00A0';
+    showActions('active');
+    showCard();
+    timerId = setInterval(tick, 1000);
+  }
+
+  function tick(){
+    remaining--;
+    timerDisplay.textContent = remaining;
+    if(remaining <= 0){
+      endRound();
+    }
+  }
+
+  function endRound(){
+    clearInterval(timerId);
+    timerId = null;
+    state = 'ended';
+    cardStage.innerHTML = '<p class="placeholder">Time\'s up!</p>';
+    lookAwayNote.textContent = '\u00A0';
+    roundMsg.textContent = players[clueGiverIndex].name + '\'s score this match: ' + players[clueGiverIndex].score;
+    showActions('ended');
+  }
+
+  function scoreAndNext(delta){
+    if(state !== 'active') return;
+    players[clueGiverIndex].score += delta;
+    renderPlayers();
+    showCard();
+  }
+
+  function swapAndContinue(){
+    clueGiverIndex = 1 - clueGiverIndex;
+    state = 'idle';
+    cardStage.innerHTML = '<p class="placeholder">Ready — press "Start round" when the Guesser is looking away.</p>';
+    timerDisplay.textContent = '–';
+    roundMsg.textContent = '\u00A0';
+    renderPlayers();
+    showActions('idle');
+  }
+
+  buildBtn.addEventListener('click', buildDeckAndStartMatch);
+  resetMatchBtn.addEventListener('click', buildDeckAndStartMatch);
+  startRoundBtn.addEventListener('click', startRound);
+  correctBtn.addEventListener('click', ()=> scoreAndNext(1));
+  skipBtn.addEventListener('click', ()=> scoreAndNext(-1));
+  tabooBtn.addEventListener('click', ()=> scoreAndNext(-1));
+  swapBtn.addEventListener('click', swapAndContinue);
+
+  buildDeckAndStartMatch();
+</script>
+
+</body>
+</html>
